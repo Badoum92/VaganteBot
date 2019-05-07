@@ -1,21 +1,20 @@
-﻿using System;
+﻿using System.Collections.Generic;
 using System.Linq;
-using System.Collections.Generic;
 using Discord;
 using Discord.WebSocket;
 
-namespace VaganteBot
+namespace VaganteBot.modules.games
 {
     public abstract class Game
     {
         // Main game message
-        public IUserMessage msg = null;
+        protected IUserMessage msg = null;
 
         // All active games
-        public static List<Game> games = new List<Game>();
+        protected static List<Game> games = new List<Game>();
 
         // What should happen when a reaction is added to msg
-        public abstract void ReactionPlay(SocketReaction reaction);
+        protected abstract void ReactionPlay(SocketReaction reaction);
 
         // Send the reaction to the game matching the message
         public static void HandleReaction(SocketReaction reaction)

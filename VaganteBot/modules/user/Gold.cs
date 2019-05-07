@@ -1,13 +1,11 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using Newtonsoft.Json;
-using Discord.Commands;
 using System.IO;
 using System.Threading.Tasks;
+using Discord.Commands;
 using Discord.WebSocket;
+using Newtonsoft.Json;
 
-namespace VaganteBot
+namespace VaganteBot.modules.user
 {
     public class Gold : ModuleBase<SocketCommandContext>
     {
@@ -15,7 +13,7 @@ namespace VaganteBot
         {
             public int gold;
             public DateTime lastChest;
-            public ulong id;
+            private ulong id;
 
             public GoldUser(int gold_, DateTime lastChest_, ulong id_)
             {
@@ -58,7 +56,7 @@ namespace VaganteBot
             return user;
         }
 
-        private int Chest(GoldUser user)
+        private static int Chest(GoldUser user)
         {
             if (user.lastChest == DateTime.Today)
                 return -1;
@@ -72,8 +70,7 @@ namespace VaganteBot
         [Command("gold")]
         public async Task ShowGold(SocketGuildUser user = null)
         {
-            if (user == null)
-                user = Context.User as SocketGuildUser;
+            user = user ?? Context.User as SocketGuildUser;
 
             if (user.IsBot)
             {

@@ -1,20 +1,17 @@
-﻿using System;
-using System.Threading.Tasks;
-using System.Collections.Generic;
-using Discord;
+﻿using System.Threading.Tasks;
 using Discord.Commands;
 using Discord.WebSocket;
 
-namespace VaganteBot
+namespace VaganteBot.modules.games.tictactoe
 {
     public class TicTacToeCommands : ModuleBase<SocketCommandContext>
     {
         [Command("ttt")]
-        public async Task TTTStart(SocketGuildUser user)
+        public async Task TttStart(SocketGuildUser user)
         {
             if (user.Id == Context.User.Id || user.IsBot)
             {
-                await ReplyAsync("Ivalid user");
+                await ReplyAsync("Invalid user");
                 return;
             }
 

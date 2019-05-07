@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Discord;
 using Discord.Commands;
 using Discord.WebSocket;
+using Game = VaganteBot.modules.games.Game;
 
 namespace VaganteBot
 {
@@ -19,7 +21,7 @@ namespace VaganteBot
         // token p2 = 'O'
         char token;
 
-        IEmote[] reactions = new IEmote[]
+        readonly IEmote[] reactions = new IEmote[]
         {
             new Emoji("↖"), new Emoji("⬆"), new Emoji("↗"),
             new Emoji("⬅"), new Emoji("⏺"), new Emoji("➡"),
@@ -44,7 +46,7 @@ namespace VaganteBot
             games.Add(this);
         }
 
-        private int ReactionToIndex(SocketReaction reaction)
+        private static int ReactionToIndex(SocketReaction reaction)
         {
             switch (reaction.Emote.Name)
             {
@@ -71,7 +73,7 @@ namespace VaganteBot
             }
         }
 
-        public override void ReactionPlay(SocketReaction reaction)
+        protected override void ReactionPlay(SocketReaction reaction)
         {
             // Check if the user is valid
             if (reaction.UserId != currentPlayer.Id)
@@ -136,20 +138,17 @@ namespace VaganteBot
             }
 
             // Check if the grid is full (draw)
-            foreach (char c in grid)
+            if (grid.Any(c => c == '-'))
             {
-                if (c == '-')
-                {
-                    Update();
-                    return;
-                }
+                Update();
+                return;
             }
 
             Update(null, "It's a draw.");
             games.Remove(this);
         }
         
-        private string EmoteFromChar(char c)
+        private static string EmoteFromChar(char c)
         {
             switch (c)
             {
@@ -173,7 +172,7 @@ namespace VaganteBot
             return str;
         }
 
-        public async void Update(ISocketMessageChannel channel = null, string suffix = "")
+        private async void Update(ISocketMessageChannel channel = null, string suffix = "")
         {
             if (suffix == "")
             {

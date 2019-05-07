@@ -1,6 +1,6 @@
 ﻿namespace VaganteBot
 {
-    public class Format
+    public static class Format
     {
         public static string FormatText(string text, string style = "")
         {

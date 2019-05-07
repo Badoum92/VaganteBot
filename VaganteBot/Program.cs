@@ -7,12 +7,13 @@ using Discord;
 using Discord.WebSocket;
 using Discord.Commands;
 using Microsoft.Extensions.DependencyInjection;
+using Game = VaganteBot.modules.games.Game;
 
 namespace VaganteBot
 {
     class Program
     {
-        public static ulong owner = 209690783580815360;
+        public const ulong owner = 209690783580815360;
 
         DiscordSocketClient client = null;
         CommandService commands = null;
@@ -21,7 +22,7 @@ namespace VaganteBot
         public static void Main(string[] args)
             => new Program().MainAsync().GetAwaiter().GetResult();
 
-        public async Task MainAsync()
+        private async Task MainAsync()
         {
             client = new DiscordSocketClient();
             commands = new CommandService();
@@ -33,7 +34,7 @@ namespace VaganteBot
             client.Log += Log;
             client.ReactionAdded += OnReactionAdded;
 
-            string token = File.ReadLines("data/token").First();
+            var token = File.ReadLines("data/token").First();
             await client.LoginAsync(TokenType.Bot, token);
             await client.StartAsync();
 
@@ -44,13 +45,13 @@ namespace VaganteBot
             await Task.Delay(-1);
         }
 
-        private Task Log(LogMessage msg)
+        private static Task Log(LogMessage msg)
         {
             Console.WriteLine(msg.ToString());
             return Task.CompletedTask;
         }
 
-        public async Task RegisterCommand()
+        private async Task RegisterCommand()
         {
             client.MessageReceived += HandleCommand;
             await commands.AddModulesAsync(Assembly.GetEntryAssembly(), services);
@@ -59,7 +60,7 @@ namespace VaganteBot
         private async Task ExecuteCommand(SocketUserMessage msg, int argPos)
         {
             Console.WriteLine("[" + DateTime.Now + "] #" + msg.Channel.Name + " | " + msg.Author.Username + ": " + msg.Content);
-            SocketCommandContext context = new SocketCommandContext(client, msg);
+            var context = new SocketCommandContext(client, msg);
             var result = await commands.ExecuteAsync(context, argPos, services);
             if (!result.IsSuccess)
                 Console.WriteLine(result.ErrorReason);
@@ -67,11 +68,11 @@ namespace VaganteBot
 
         private async Task HandleCommand(SocketMessage msg)
         {
-            SocketUserMessage message = msg as SocketUserMessage;
+            var message = msg as SocketUserMessage;
             if (message is null || message.Author.IsBot)
                 return;
 
-            int argPos = 0;
+            var argPos = 0;
 
             if (message.HasStringPrefix("v!!", ref argPos))
             {
@@ -84,7 +85,7 @@ namespace VaganteBot
             }
         }
 
-        private async Task OnReactionAdded(Cacheable<IUserMessage, ulong> cache, ISocketMessageChannel channel, SocketReaction reaction)
+        private static async Task OnReactionAdded(Cacheable<IUserMessage, ulong> cache, ISocketMessageChannel channel, SocketReaction reaction)
         {
             Game.HandleReaction(reaction);
             await Task.CompletedTask;
