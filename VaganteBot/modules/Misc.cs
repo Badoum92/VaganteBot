@@ -13,7 +13,7 @@ namespace VaganteBot.modules
         {
             using (WebClient client = new WebClient()) 
             {
-                client.DownloadFileAsync(new Uri(url), "path");
+                client.DownloadFileAsync(new Uri(url), path);
             }
         }
     
