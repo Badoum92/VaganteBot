@@ -16,7 +16,7 @@ namespace VaganteBot.modules
                 client.DownloadFileAsync(new Uri(url), path);
             }
         }
-    
+
         [Command("ping")]
         public async Task Ping()
         {

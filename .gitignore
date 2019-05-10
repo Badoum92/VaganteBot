@@ -1,0 +1,5 @@
+token
+bin/
+obj/
+.idea
+.vs

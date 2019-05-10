@@ -40,7 +40,7 @@ namespace VaganteBot.modules.user
             return "data/gold/" + id + ".json";
         }
 
-        public GoldUser GetUser(ulong id)
+        public static GoldUser GetUser(ulong id)
         {
             string path = GetPath(id);
             if (!File.Exists(path))
@@ -56,6 +56,12 @@ namespace VaganteBot.modules.user
             return user;
         }
 
+        public static bool HasEnoughGold(ulong id, int amount)
+        {
+            var goldUser = GetUser(id);
+            return goldUser.gold >= amount;
+        }
+        
         private static int Chest(GoldUser user)
         {
             if (user.lastChest == DateTime.Today)

@@ -1,13 +1,9 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
 using Discord;
-using Discord.Commands;
 using Discord.WebSocket;
-using Game = VaganteBot.modules.games.Game;
 
-namespace VaganteBot
+namespace VaganteBot.modules.games.tictactoe
 {
     public class TicTacToe : Game
     {
