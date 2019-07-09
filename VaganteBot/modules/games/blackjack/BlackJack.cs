@@ -36,13 +36,14 @@ namespace VaganteBot.modules.games.blackjack
 
             int score = GetScore(player_cards);
             string suffix = "Your score: **" + score + "**\nBot's score: **???**";
-            Update(channel, suffix);
 
             if (score == 21)
             {
-                Update(null, suffix + "\nYou won! **+" + 1.5f * bet + "**");
+                Update(channel, suffix + "\nYou won! **+" + 1.5f * bet + "**");
                 return;
             }
+
+            Update(channel, suffix);
             
             games.Add(this);
         }
