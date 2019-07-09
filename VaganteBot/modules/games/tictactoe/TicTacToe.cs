@@ -17,7 +17,7 @@ namespace VaganteBot.modules.games.tictactoe
         // token p2 = 'O'
         char token;
 
-        readonly IEmote[] reactions = new IEmote[]
+        readonly IEmote[] reactions = 
         {
             new Emoji("↖"), new Emoji("⬆"), new Emoji("↗"),
             new Emoji("⬅"), new Emoji("⏺"), new Emoji("➡"),
@@ -177,7 +177,6 @@ namespace VaganteBot.modules.games.tictactoe
 
             if (channel == null && msg == null)
             {
-                return;
             }
             else if (msg == null)
             {

@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using Discord;
 using Discord.WebSocket;
@@ -14,7 +15,7 @@ namespace VaganteBot.modules.games.blackjack
 
         private bool reveal;
 
-        readonly IEmote[] reactions = new IEmote[]
+        readonly IEmote[] reactions = 
         {
             new Emoji("💳"), new Emoji("🛑")
         };
@@ -27,16 +28,22 @@ namespace VaganteBot.modules.games.blackjack
             player_cards = new List<Card>();
             bot_cards = new List<Card>();
             reveal = false;
-            
+
             Draw(player_cards);
             Draw(player_cards);
             Draw(bot_cards);
             Draw(bot_cards);
 
             int score = GetScore(player_cards);
-            string suffix = "Your score: **" + score + "**\nBot's score: ???";
-            
+            string suffix = "Your score: **" + score + "**\nBot's score: **???**";
             Update(channel, suffix);
+
+            if (score == 21)
+            {
+                Update(null, suffix + "\nYou won! **+" + 1.5f * bet + "**");
+                return;
+            }
+            
             games.Add(this);
         }
 
@@ -46,35 +53,97 @@ namespace VaganteBot.modules.games.blackjack
             deck.RemoveAt(0);
         }
 
-        private int GetScore(List<Card> cards)
+        private void Stand()
         {
-            int score = 0;
-            foreach (var card in cards)
+            while (GetScore(bot_cards) <= 16)
             {
-                if (card.val == 1)
+                Draw(bot_cards);
+            }
+
+            reveal = true;
+        }
+
+        private void CheckWin()
+        {
+            int playerScore = GetScore(player_cards);
+            int botScore = GetScore(bot_cards);
+
+            if (!reveal)
+            {
+                string suffix = "Your score: **" + playerScore + "**\nBot's score: **???**";
+                if (playerScore > 21)
                 {
-                    if (score + 11 > 21)
-                        score += 1;
-                    else
-                        score += 11;
+                    Update(null, suffix + "\nYou lost! **-" + bet + "**");
+                    games.Remove(this);
                 }
                 else
                 {
-                    score += card.val;
+                    Update(null, suffix);
                 }
+            }
+            else
+            {
+                string suffix = "Your score: **" + playerScore + "**\nBot's score: **" + botScore + "**";
+                if (botScore > 21 || playerScore > botScore)
+                    suffix += "\nYou won! **+" + 2 * bet + "**";
+                else if (botScore == playerScore)
+                    suffix += "\nIt's a draw! **+0**";
+                else
+                    suffix += "\nYou lost! **-" + bet + "**";
+                Update(null, suffix);
+                games.Remove(this);
+            }
+        }
+
+        private int GetScore(List<Card> cards)
+        {
+            int score = 0;
+            int aces = 0;
+            foreach (var card in cards)
+            {
+                score += card.BlackJackVal();
+                if (card.val == 1)
+                    aces++;
+            }
+
+            for (; aces > 0; aces--)
+            {
+                if (score <= 21)
+                    break;
+                score -= 10;
             }
 
             return score;
         }
-        
-        private void Update(ISocketMessageChannel channel, string suffix = "")
+
+        private async void Update(ISocketMessageChannel channel, string suffix = "")
         {
-            channel.SendMessageAsync(ToString() + "\n" + suffix);
+            if (channel != null)
+            {
+                msg = await channel.SendMessageAsync(ToString() + "\n" + suffix);
+                await msg.AddReactionsAsync(reactions);
+            }
+            else
+            {
+                await msg.ModifyAsync(m => m.Content = ToString() + "\n" + suffix);
+            }
         }
 
         protected override void ReactionPlay(SocketReaction reaction)
         {
-            throw new System.NotImplementedException();
+            if (reaction.UserId != player.Id)
+                return;
+
+            if (reaction.Emote.Name == "💳")
+            {
+                Draw(player_cards);
+                CheckWin();
+            }
+            else if (reaction.Emote.Name == "🛑")
+            {
+                Stand();
+                CheckWin();
+            }
         }
 
         public override string ToString()
@@ -82,7 +151,7 @@ namespace VaganteBot.modules.games.blackjack
             string str = "<@" + player.Id + ">'s cards: :white_small_square:  ";
             foreach (var card in player_cards)
             {
-                str += card.ToString() + "  :white_small_square:";
+                str += card + "  :white_small_square:";
             }
 
             str += "\n**Bot**'s cards: :white_small_square:  ";
@@ -91,12 +160,12 @@ namespace VaganteBot.modules.games.blackjack
             {
                 foreach (var card in bot_cards)
                 {
-                    str += card.ToString() + "  :white_small_square:";
+                    str += card + "  :white_small_square:";
                 }
             }
             else
             {
-                str += bot_cards[0].ToString() + "  :white_small_square:  :question::question:  :white_small_square:";
+                str += bot_cards[0] + "  :white_small_square:  :question::question:  :white_small_square:";
             }
 
             return str;
