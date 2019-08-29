@@ -7,9 +7,19 @@ namespace VaganteBot.modules
 {
     public class User : ModuleBase<SocketCommandContext>
     {
-        public static Discord.Color GetUserColor(SocketGuildUser user)
+        public static Color GetUserColor(SocketGuildUser user)
         {
             return Role.GetHighestRole(user).Color;
+        }
+
+        public static bool HasRole(SocketGuildUser user, ulong id)
+        {
+            foreach (var r in user.Roles)
+            {
+                if (r.Id == id)
+                    return true;
+            }
+            return false;
         }
         
         [Command("avatar")]

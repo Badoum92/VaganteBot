@@ -110,5 +110,18 @@ namespace VaganteBot.modules.challenge
             var challenge = Util.GetClosestElement(roleName, challenges, c => c.role);
             await Context.Channel.SendMessageAsync(null, false, MakeEmbed(challenge));
         }
+
+        [Command("monthlychallenge")]
+        public async Task MonthlyChallenge()
+        {
+            var user = Context.User as SocketGuildUser;
+            if (!User.HasRole(user, 223128952426856451) && !User.HasRole(user, 482825446753566721))
+                return;
+
+            Random rand = new Random();
+            int index = rand.Next(0, challenges.Count);
+            ChallengeInstance challenge = challenges[index];
+            await Context.Channel.SendMessageAsync(null, false, MakeEmbed(challenge));
+        }
     }
 }
