@@ -8,7 +8,7 @@ namespace VaganteBot.modules.games.blackjack
     public class BlackJackCommands : ModuleBase<SocketCommandContext>
     {
         [Command("blackjack")]
-        public async Task BlackJackStart(int bet)
+        public async Task BlackJackStart(int bet = 0)
         {
             if (bet < 0 || !Gold.HasEnoughGold(Context.User.Id, bet))
             {

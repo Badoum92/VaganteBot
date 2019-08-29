@@ -3,7 +3,7 @@ using Discord;
 using Discord.Commands;
 using Discord.WebSocket;
 
-namespace VaganteBot.modules.user
+namespace VaganteBot.modules
 {
     public class User : ModuleBase<SocketCommandContext>
     {
@@ -18,7 +18,7 @@ namespace VaganteBot.modules.user
             user = user ?? Context.User as SocketGuildUser;
 
             EmbedBuilder builder = new EmbedBuilder();
-            builder.WithTitle(Format.FormatText(user.Username, "**"));
+            builder.WithTitle(Util.FormatText(user.Username, "**"));
             builder.WithImageUrl(user.GetAvatarUrl());
             builder.WithColor(GetUserColor(user));
 
@@ -32,7 +32,7 @@ namespace VaganteBot.modules.user
 
             var highestRole = Role.GetHighestRole(user);
             EmbedBuilder builder = new EmbedBuilder();
-            builder.WithTitle(Format.FormatText(user.Username, "**"));
+            builder.WithTitle(Util.FormatText(user.Username, "**"));
             builder.WithThumbnailUrl(user.GetAvatarUrl());
             builder.WithColor(highestRole.Color);
             builder.AddField("Account created on", user.JoinedAt);

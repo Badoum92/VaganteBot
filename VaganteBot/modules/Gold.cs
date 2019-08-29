@@ -13,7 +13,7 @@ namespace VaganteBot.modules.user
         {
             public int gold;
             public DateTime lastChest;
-            private ulong id;
+            public ulong id;
 
             public GoldUser(int gold_, DateTime lastChest_, ulong id_)
             {
@@ -30,6 +30,7 @@ namespace VaganteBot.modules.user
 
             public void Update()
             {
+                Console.WriteLine(id);
                 string json = JsonConvert.SerializeObject(this, Formatting.Indented);
                 File.WriteAllText(GetPath(id), json);
             }
@@ -54,6 +55,11 @@ namespace VaganteBot.modules.user
             string json = File.ReadAllText(path);
             GoldUser user = JsonConvert.DeserializeObject<GoldUser>(json);
             return user;
+        }
+
+        public static void AddGold(ulong id, int amount)
+        {
+            GetUser(id).AddGold(amount);
         }
 
         public static bool HasEnoughGold(ulong id, int amount)
@@ -86,7 +92,7 @@ namespace VaganteBot.modules.user
 
             GoldUser goldUser = GetUser(user.Id);
 
-            await ReplyAsync(Format.FormatText(user.Username, "**") + " has **" + goldUser.gold + "** vgold.");
+            await ReplyAsync(Util.FormatText(user.Username, "**") + " has **" + goldUser.gold + "** vgold.");
         }
 
         [Command("chest")]
@@ -98,11 +104,11 @@ namespace VaganteBot.modules.user
             string reply = "";
             if (amount < 0)
             {
-                reply = Format.FormatText(Context.User.Username, "**") + ", you have already opened a chest today.";
+                reply = Util.FormatText(Context.User.Username, "**") + ", you have already opened a chest today.";
             }
             else
             {
-                reply = Format.FormatText(Context.User.Username, "**") + ", you opened a chest and found **" + amount + "** gold coins!\n";
+                reply = Util.FormatText(Context.User.Username, "**") + ", you opened a chest and found **" + amount + "** gold coins!\n";
                 reply += "You now have **" + goldUser.gold + "** gold coins.";
             }
             await ReplyAsync(reply);
@@ -116,7 +122,7 @@ namespace VaganteBot.modules.user
                 await ReplyAsync("You cannot give gold to yourself.");
                 return;
             }
-            else if (user.IsBot)
+            if (user.IsBot)
             {
                 await ReplyAsync("You cannot give gold to a bot.");
                 return;
@@ -130,7 +136,7 @@ namespace VaganteBot.modules.user
                 if (Context.User.Id == Program.owner)
                 {
                     dst.AddGold(-amount);
-                    await ReplyAsync(Format.FormatText(user.Username, "**") + " found **" + (-amount) + "** gold coins!");
+                    await ReplyAsync(Util.FormatText(user.Username, "**") + " found **" + (-amount) + "** gold coins!");
                 }
                 else
                 {
@@ -141,16 +147,16 @@ namespace VaganteBot.modules.user
 
             if (amount > src.gold)
             {
-                await ReplyAsync(Format.FormatText(Context.User.Username, "**") + ", you do not have enough gold (" + src.gold + ")!");
+                await ReplyAsync(Util.FormatText(Context.User.Username, "**") + ", you do not have enough gold (" + src.gold + ")!");
                 return;
             }
 
             src.AddGold(-amount);
             dst.AddGold(amount);
 
-            string reply = Format.FormatText(Context.User.Username, "**") + " gave **" + amount + "** gold coins to " + Format.FormatText(user.Username, "**") + "\n";
-            reply += Format.FormatText(Context.User.Username, "**") + " (" + src.gold + ")\n";
-            reply += Format.FormatText(user.Username, "**") + " (" + dst.gold + ")";
+            string reply = Util.FormatText(Context.User.Username, "**") + " gave **" + amount + "** gold coins to " + Util.FormatText(user.Username, "**") + "\n";
+            reply += Util.FormatText(Context.User.Username, "**") + " (" + src.gold + ")\n";
+            reply += Util.FormatText(user.Username, "**") + " (" + dst.gold + ")";
 
             await ReplyAsync(reply);
         }

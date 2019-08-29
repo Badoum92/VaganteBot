@@ -20,7 +20,9 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Folder Include="data\gold" />
     <Folder Include="data\gold\" />
+    <Folder Include="modules\user" />
   </ItemGroup>
 
 </Project>

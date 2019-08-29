@@ -7,6 +7,8 @@ using Discord;
 using Discord.WebSocket;
 using Discord.Commands;
 using Microsoft.Extensions.DependencyInjection;
+using VaganteBot.modules;
+using VaganteBot.modules.challenge;
 using Game = VaganteBot.modules.games.Game;
 
 namespace VaganteBot
@@ -42,6 +44,8 @@ namespace VaganteBot
 
             await RegisterCommand();
 
+            Challenge.Init();
+            
             await Task.Delay(-1);
         }
 

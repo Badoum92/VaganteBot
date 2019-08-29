@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using Discord;
 using Discord.WebSocket;
+using VaganteBot.modules.user;
 
 namespace VaganteBot.modules.games.blackjack
 {
@@ -28,6 +29,8 @@ namespace VaganteBot.modules.games.blackjack
             player_cards = new List<Card>();
             bot_cards = new List<Card>();
             reveal = false;
+            
+            Gold.AddGold(player_.Id, -bet);
 
             Draw(player_cards);
             Draw(player_cards);
@@ -39,7 +42,8 @@ namespace VaganteBot.modules.games.blackjack
 
             if (score == 21)
             {
-                Update(channel, suffix + "\nYou won! **+" + 1.5f * bet + "**");
+                Update(channel, suffix + "\nYou won! **+" + (int)(1.5f * bet) + "**");
+                Gold.AddGold(player_.Id, (int)(1.5f * bet));
                 return;
             }
 
@@ -86,9 +90,16 @@ namespace VaganteBot.modules.games.blackjack
             {
                 string suffix = "Your score: **" + playerScore + "**\nBot's score: **" + botScore + "**";
                 if (botScore > 21 || playerScore > botScore)
+                {
                     suffix += "\nYou won! **+" + 2 * bet + "**";
+                    Gold.AddGold(player.Id, bet * 2);
+                }
                 else if (botScore == playerScore)
+                {
                     suffix += "\nIt's a draw! **+0**";
+                    Gold.AddGold(player.Id, bet);
+
+                }
                 else
                     suffix += "\nYou lost! **-" + bet + "**";
                 Update(null, suffix);

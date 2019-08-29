@@ -21,7 +21,8 @@ namespace VaganteBot.modules.games.tictactoe
         {
             new Emoji("↖"), new Emoji("⬆"), new Emoji("↗"),
             new Emoji("⬅"), new Emoji("⏺"), new Emoji("➡"),
-            new Emoji("↙"), new Emoji("⬇"), new Emoji("↘")
+            new Emoji("↙"), new Emoji("⬇"), new Emoji("↘"),
+            new Emoji("🛑")
         };
 
         public TicTacToe(SocketGuildUser p1, SocketGuildUser p2, ISocketMessageChannel channel)
@@ -64,6 +65,8 @@ namespace VaganteBot.modules.games.tictactoe
                     return 7;
                 case "↘":
                     return 8;
+                case "🛑":
+                    return 9;
                 default:
                     return -1;
             }
@@ -78,6 +81,12 @@ namespace VaganteBot.modules.games.tictactoe
             // Get the grid index from the reaction
             // Check if the reaction is valid and that the grid index is not taken yet
             int index = ReactionToIndex(reaction);
+            if (index == 9)
+            {
+                Update(null, Util.FormatText(currentPlayer.Username, "**") + " forfeited the game");
+                games.Remove(this);
+                return;
+            }
             if (index == -1 || grid[index] != '-')
                 return;
 
@@ -126,9 +135,9 @@ namespace VaganteBot.modules.games.tictactoe
             if (winner > 0)
             {
                 if (winner == 1)
-                    Update(null, Format.FormatText(p1.Username, "**") + " won!");
+                    Update(null, Util.FormatText(p1.Username, "**") + " won!");
                 else
-                    Update(null, Format.FormatText(p2.Username, "**") + " won!");
+                    Update(null, Util.FormatText(p2.Username, "**") + " won!");
                 games.Remove(this);
                 return;
             }
@@ -161,7 +170,7 @@ namespace VaganteBot.modules.games.tictactoe
 
         public override string ToString()
         {
-            string str = $"{Format.FormatText(p1.Username, "**")} VS {Format.FormatText(p2.Username, "**")}\n" +
+            string str = $"{Util.FormatText(p1.Username, "**")} VS {Util.FormatText(p2.Username, "**")}\n" +
                          $"{EmoteFromChar(grid[0])}{EmoteFromChar(grid[1])}{EmoteFromChar(grid[2])}\n" +
                          $"{EmoteFromChar(grid[3])}{EmoteFromChar(grid[4])}{EmoteFromChar(grid[5])}\n" +
                          $"{EmoteFromChar(grid[6])}{EmoteFromChar(grid[7])}{EmoteFromChar(grid[8])}";
@@ -172,7 +181,7 @@ namespace VaganteBot.modules.games.tictactoe
         {
             if (suffix == "")
             {
-                suffix = Format.FormatText(currentPlayer.Username, "**") + "'s turn.";
+                suffix = Util.FormatText(currentPlayer.Username, "**") + "'s turn.";
             }
 
             if (channel == null && msg == null)

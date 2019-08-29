@@ -2,9 +2,13 @@
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Runtime.InteropServices;
 using System.Threading.Tasks;
+using System.Collections.Generic;
 using Discord;
 using Discord.Commands;
+using Discord.WebSocket;
+
 namespace VaganteBot.modules
 {
     public class Misc : ModuleBase<SocketCommandContext>
