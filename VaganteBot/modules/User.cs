@@ -45,8 +45,8 @@ namespace VaganteBot.modules
             builder.WithTitle(Util.FormatText(user.Username, "**"));
             builder.WithThumbnailUrl(user.GetAvatarUrl());
             builder.WithColor(highestRole.Color);
-            builder.AddField("Account created on", user.JoinedAt);
-            builder.AddField("Join date", user.CreatedAt);
+            builder.AddField("Account created on", user.CreatedAt);
+            builder.AddField("Join date", user.JoinedAt);
             builder.AddField("Number of roles", user.Roles.Count - 1);
             builder.AddField("Highest role", highestRole.Name);
 
