@@ -2,62 +2,74 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
-using System.Reflection;
 using System.Web;
 using System.IO;
-using Microsoft.Extensions.DependencyInjection;
 using Discord.WebSocket;
 using Discord;
 using Discord.Audio;
 using System.Diagnostics;
-using Google.Apis.Auth.OAuth2;
 using Google.Apis.Services;
-using Google.Apis.Upload;
-using Google.Apis.Util.Store;
 using Google.Apis.YouTube.v3;
-using Google.Apis.YouTube.v3.Data;
 
 namespace vBot.modules.music
 {
     public class VoiceChat : ModuleBase<SocketCommandContext>
     {
         static IAudioClient VCclient = null;
-
-        static Queue<string> queue;
-        static List<ulong> voted;
-
-        static string[] currentSong;
-
+        static Queue<Song> queue;
+        static List<ulong> votes;
+        static Song currentSong = null;
         static Stopwatch stopwatch;
-
         static Process ffmpeg;
         static AudioOutStream stream;
-
         static YouTubeService youtubeService;
-
-        static bool playing;
-        static int votes;
 
         class Song
         {
-            Song(string url, string thumbnailUrl, string title, string duration, string requester, string channel)
+            public string url;
+            public string thumbnailUrl;
+            public string title;
+            public string ytChannel;
+            public int durationSec;
+            public SocketGuildUser requester;
+
+            public Song(string url, string thumbnailUrl, string title, string ytChannel, int durationSec, SocketGuildUser requester)
             {
                 this.url = url;
                 this.thumbnailUrl = thumbnailUrl;
                 this.title = title;
-                this.duration = duration;
+                this.ytChannel = ytChannel;
+                this.durationSec = durationSec;
                 this.requester = requester;
-                this.channel = channel;
             }
 
-            public string url;
-            public string thumbnailUrl;
-            public string title;
-            public string duration;
-            public string requester;
-            public string channel;
+            public override string ToString()
+            {
+                string s = "Added song =\n{\n";
+                s += "    URL: " + url + "\n";
+                s += "    Title: " + title + "\n";
+                s += "    Channel: " + ytChannel + "\n";
+                s += "    Duration: " + FormatTime(durationSec) + "\n";
+                s += "    Requested by: " + requester.Username + "\n";
+                s += "}";
+                return s;
+            }
+
+            public Embed ToEmbed()
+            {
+                EmbedBuilder embed = new EmbedBuilder();
+
+                embed.WithColor(new Color(255, 255, 255));
+                embed.AddField("Currently Playing", title);
+                embed.AddField("By", ytChannel);
+                embed.AddField("Duration", FormatTime(durationSec));
+                embed.AddField("URL", url);
+                embed.WithImageUrl(thumbnailUrl);
+                embed.AddField("Requested by", requester.Username);
+
+                return embed.Build();
+            }
         }
 
         [Command("join", RunMode = RunMode.Async)]
@@ -70,12 +82,17 @@ namespace vBot.modules.music
             }
 
             IVoiceChannel channel = (Context.User as IVoiceState).VoiceChannel;
-            playing = false;
+            if (channel == null)
+            {
+                await ReplyAsync(Util.FormatText(Context.User.Username, "**") + ", you are not in a voice channel.");
+                return;
+            }
+
             VCclient = await channel.ConnectAsync();
             stream = VCclient.CreatePCMStream(AudioApplication.Music);
-            queue = new Queue<string>();
             currentSong = null;
-            voted = new List<ulong>();
+            queue = new Queue<Song>();
+            votes = new List<ulong>();
             stopwatch = new Stopwatch();
             youtubeService = new YouTubeService(new BaseClientService.Initializer()
             {
@@ -110,22 +127,22 @@ namespace vBot.modules.music
         {
             SocketVoiceChannel channel = (Context.User as IVoiceState).VoiceChannel as SocketVoiceChannel;
 
-            if (channel == null) return;
+            if (channel == null)
+                return;
 
-            if (voted.Contains(Context.User.Id))
+            if (votes.Contains(Context.User.Id))
             {
                 await ReplyAsync("You have already voted");
                 return;
             }
 
-            voted.Add(Context.User.Id);
+            votes.Add(Context.User.Id);
 
-            votes++;
+            await ReplyAsync(Context.User.Mention + " voted to skip the current song. " + votes.Count + "/" + ((channel.Users.Count + 1) / 2) + " votes to skip");
 
-            await ReplyAsync(Context.User.Mention + " voted to skip the current song. " + votes + "/" + ((channel.Users.Count + 1) / 2) + " votes to skip");
-
-            if (votes >= (channel.Users.Count + 1) / 2)
+            if (votes.Count >= (channel.Users.Count + 1) / 2)
             {
+                votes.Clear();
                 await ReplyAsync("Skipped!");
                 ffmpeg.StandardOutput.BaseStream.Dispose();
                 await stream.FlushAsync();
@@ -146,43 +163,73 @@ namespace vBot.modules.music
         [Command("remaining", RunMode = RunMode.Async)]
         public async Task Remaning()
         {
-            string[] duration = currentSong[2].Split(':');
-            int totalSec = Int32.Parse(duration[0]) * 60 + Int32.Parse(duration[1]) + 2;
+            if (currentSong == null)
+            {
+                await ReplyAsync("There is no song currently playing.");
+                return;
+            }
+
             int elapsedSec = (int)Math.Floor(stopwatch.Elapsed.TotalSeconds);
-            int remaining = totalSec - elapsedSec;
+            int totalSec = currentSong.durationSec;
+            int remainingSec = totalSec - elapsedSec;
+            string elapsedStr = FormatTime(elapsedSec);
+            string totalStr = FormatTime(totalSec);
+            string remainingStr = FormatTime(remainingSec);
 
-            int min = remaining / 60;
-            int sec = remaining % 60;
+            float percent = (elapsedSec * 100.0f / totalSec) / 100.0f;
+            int totalSymbols = 40;
+            float nbSymbols = totalSymbols * percent;
 
-            await ReplyAsync("Time remaining for **[" + currentSong[0] + "]**: ``" + min + ":" + (sec < 10 ? "0" : "") + sec + "``");
+            string s = Util.FormatText(currentSong.title, "**") + ": " + remainingStr + " remaining\n";
+            s += "`00:00 - [";
+            for (int i = 0; i < nbSymbols; i++)
+            {
+                s += "=";
+            }
+            s += "(" + elapsedStr + ")";
+            for (int i = 0; i < totalSymbols - nbSymbols; i++)
+            {
+                s += " ";
+            }
+            s += "] - " + totalStr + "`";
+
+            await ReplyAsync(s);
         }
 
         [Command("addsong", RunMode = RunMode.Async)]
         public async Task AddSong([Remainder] string url)
         {
-            if (VCclient == null) return;
-
-            int count = 0;
-            foreach (string song in queue)
+            if (VCclient == null)
             {
-                if (song.Split("$|£")[4] == Context.User.Username) count++;
+                await Join();
+                if (VCclient == null)
+                    return;
             }
 
-            if (count >= 4)
+            int count = 0;
+            foreach (var song in queue)
             {
-                await ReplyAsync("You have already queued 4 songs, wait until one of your songs is played");
+                if (song.requester.Id == Context.User.Id)
+                    count++;
+            }
+
+            int maxUserSongs = 10;
+            if (count >= maxUserSongs)
+            {
+                await ReplyAsync(Util.FormatText(Context.User.Username, "**") + ", you have already queued " + maxUserSongs + " songs, wait until one of your songs is played");
                 return;
             }
 
             await SearchVideo(url);
 
-            if (!playing) await PlaySong();
+            if (currentSong == null)
+                await PlaySong();
         }
 
         [Command("next", RunMode = RunMode.Async)]
         public async Task Next()
         {
-            if (!playing)
+            if (currentSong == null)
             {
                 await ReplyAsync("There is not song playing");
                 return;
@@ -195,10 +242,8 @@ namespace vBot.modules.music
             }
 
             string str = "```";
-
-            foreach (string song in queue)
-                str += song.Split("$|£")[0] + " (" + song.Split("$|£")[2] + ")\n";
-
+            foreach (var song in queue)
+                str += song.title + " (" + FormatTime(song.durationSec) + ")\n";
             str += "```";
 
             await ReplyAsync(str);
@@ -209,7 +254,7 @@ namespace vBot.modules.music
         {
             if (currentSong != null)
             {
-                await Context.Channel.SendMessageAsync("", false, MakeSongEmbed(currentSong));
+                await Context.Channel.SendMessageAsync("", false, currentSong.ToEmbed());
             }
             else
             {
@@ -224,21 +269,14 @@ namespace vBot.modules.music
 
             if (queue.Count == 0)
             {
-                playing = false;
                 currentSong = null;
+                await DisconnectVC();
                 return;
             }
 
-            playing = true;
-            votes = 0;
-            voted = new List<ulong>();
-
-            currentSong = queue.Dequeue().Split("$|£");
-
-            await Context.Channel.SendMessageAsync("", false, MakeSongEmbed(currentSong));
-
-            ffmpeg = CreateStream(currentSong[3]);
-
+            currentSong = queue.Dequeue();
+            await Context.Channel.SendMessageAsync("", false, currentSong.ToEmbed());
+            ffmpeg = CreateStream(currentSong.url);
             stopwatch.Start();
 
             await ffmpeg.StandardOutput.BaseStream.CopyToAsync(stream);
@@ -263,7 +301,7 @@ namespace vBot.modules.music
             string videoID = GetVideoID(url);
             if (videoID == "")
             {
-                await ReplyAsync("Could not find requested song " + Context.User.Username);
+                await ReplyAsync(Util.FormatText(Context.User.Username, "**") + ", could not find requested song.");
                 return;
             }
 
@@ -275,32 +313,36 @@ namespace vBot.modules.music
             contentRequest.Id = videoID;
             var contentResult = await contentRequest.ExecuteAsync();
 
-            string[] duration = contentResult.Items[0].ContentDetails.Duration.Split('M');
-            int min = Int32.Parse(duration[0].Split('T')[1]);
-            int sec = Int32.Parse(duration[1].Split('S')[0]);
+            if (snippetResult.Items.Count == 0 || contentResult.Items.Count == 0)
+            {
+                await ReplyAsync(Util.FormatText(Context.User.Username, "**") + ", could not find requested song.");
+                return;
+            }
 
-            if (min >= 30)
+            int durationSec = GetDurationSec(contentResult.Items[0].ContentDetails.Duration);
+
+            if (durationSec / 60 >= 30)
             {
                 await ReplyAsync("The song is longer than 30 minutes, please choose another one");
             }
 
             if (snippetResult.Items.Count == 1)
             {
-                string link = "https://www.youtube.com/watch?v=" + videoID;
-                string thumbnail = snippetResult.Items[0].Snippet.Thumbnails.Medium.Url;
+                string videoUrl = "https://www.youtube.com/watch?v=" + videoID;
+                string thumbnailUrl = snippetResult.Items[0].Snippet.Thumbnails.Medium.Url;
                 string title = snippetResult.Items[0].Snippet.Title;
-                string length = min + ":" + sec;
-                string user = Context.User.Username;
-                string channel = snippetResult.Items[0].Snippet.ChannelTitle;
+                SocketGuildUser requester = Context.User as SocketGuildUser;
+                string ytChannel = snippetResult.Items[0].Snippet.ChannelTitle;
 
-                queue.Enqueue(title + "$|£" + channel + "$|£" + length + "$|£" + link + "$|£" + user + "$|£" + thumbnail);
-                Console.WriteLine(title + "$|£" + channel + "$|£" + length + "$|£" + link + "$|£" + user + "$|£" + thumbnail);
+                Song song = new Song(videoUrl, thumbnailUrl, title, ytChannel, durationSec, requester);
+                queue.Enqueue(song);
+                Console.WriteLine(song);
 
-                await ReplyAsync("Song **[" + snippetResult.Items[0].Snippet.Title + "]** added " + Context.User.Mention);
+                await ReplyAsync("Song **[" + title + "]** added " + Context.User.Mention);
             }
             else
             {
-                await ReplyAsync("More than one result found " + Context.User.Username);
+                await ReplyAsync("More than one result found " + Context.User.Username + ", not adding anything");
             }
         }
 
@@ -313,46 +355,47 @@ namespace vBot.modules.music
 
         public static async Task StopMusic()
         {
-            if (!playing) return;
+            if (currentSong == null)
+                return;
 
-            playing = false;
+            currentSong = null;
             ffmpeg.StandardOutput.BaseStream.Dispose();
             await stream.FlushAsync();
             queue.Clear();
         }
 
-        private string GetVideoID(string url)
+        private static string GetVideoID(string url)
         {
             var uri = new Uri(url);
             var query = HttpUtility.ParseQueryString(uri.Query);
             string ret = "";
-            if (query.AllKeys.Contains("v"))
+            if (query != null && query.AllKeys.Contains("v"))
             {
                 ret = query["v"];
             }
             return ret;
         }
 
-        private Embed MakeSongEmbed(string[] current)
+        private static int GetDurationSec(string s)
         {
-            EmbedBuilder embed = new EmbedBuilder();
+            string[] duration = s.Split('M');
+            int min = Int32.Parse(duration[0].Split('T')[1]);
+            int sec = Int32.Parse(duration[1].Split('S')[0]);
+            return sec + min * 60;
+        }
 
-            string name = current[0];
-            string channel = current[1];
-            string duration = current[2];
-            string url = current[3];
-            string user = current[4];
-            string thumbnail = current[5];
-
-            embed.WithColor(new Color(255, 255, 255));
-            embed.AddField("Currently Playing", name);
-            embed.AddField("By", channel);
-            embed.AddField("Duration", duration);
-            embed.AddField("URL", url);
-            embed.WithImageUrl(thumbnail);
-            embed.AddField("Requested by", user);
-
-            return embed.Build();
+        public static string FormatTime(int totalSec)
+        {
+            int min = totalSec / 60;
+            int sec = totalSec - (min * 60);
+            string s = "";
+            if (min < 10)
+                s += "0";
+            s += min + ":";
+            if (sec < 10)
+                s += "0";
+            s += sec;
+            return s;
         }
     }
 }
