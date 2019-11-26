@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Reflection;
+using System.Web;
 using System.IO;
 using Microsoft.Extensions.DependencyInjection;
 using Discord.WebSocket;
@@ -34,8 +35,30 @@ namespace vBot.modules.music
         static Process ffmpeg;
         static AudioOutStream stream;
 
+        static YouTubeService youtubeService;
+
         static bool playing;
         static int votes;
+
+        class Song
+        {
+            Song(string url, string thumbnailUrl, string title, string duration, string requester, string channel)
+            {
+                this.url = url;
+                this.thumbnailUrl = thumbnailUrl;
+                this.title = title;
+                this.duration = duration;
+                this.requester = requester;
+                this.channel = channel;
+            }
+
+            public string url;
+            public string thumbnailUrl;
+            public string title;
+            public string duration;
+            public string requester;
+            public string channel;
+        }
 
         [Command("join", RunMode = RunMode.Async)]
         public async Task Join()
@@ -54,6 +77,11 @@ namespace vBot.modules.music
             currentSong = null;
             voted = new List<ulong>();
             stopwatch = new Stopwatch();
+            youtubeService = new YouTubeService(new BaseClientService.Initializer()
+            {
+                ApiKey = File.ReadLines("data/youtubetoken").First(),
+                ApplicationName = GetType().ToString()
+            });
         }
 
         [Command("leave", RunMode = RunMode.Async)]
@@ -154,6 +182,12 @@ namespace vBot.modules.music
         [Command("next", RunMode = RunMode.Async)]
         public async Task Next()
         {
+            if (!playing)
+            {
+                await ReplyAsync("There is not song playing");
+                return;
+            }
+
             if (queue.Count == 0)
             {
                 await ReplyAsync("This is the last song");
@@ -226,20 +260,19 @@ namespace vBot.modules.music
 
         private async Task SearchVideo(string url)
         {
-            var youtubeService = new YouTubeService(new BaseClientService.Initializer()
+            string videoID = GetVideoID(url);
+            if (videoID == "")
             {
-                ApiKey = File.ReadLines("data/youtubetoken").First(),
-                ApplicationName = GetType().ToString()
-            });
-
-            string endID = FormatURL(url);
+                await ReplyAsync("Could not find requested song " + Context.User.Username);
+                return;
+            }
 
             var snippetRequest = youtubeService.Videos.List("snippet");
-            snippetRequest.Id = endID;
+            snippetRequest.Id = videoID;
             var snippetResult = await snippetRequest.ExecuteAsync();
 
             var contentRequest = youtubeService.Videos.List("contentDetails");
-            contentRequest.Id = endID;
+            contentRequest.Id = videoID;
             var contentResult = await contentRequest.ExecuteAsync();
 
             string[] duration = contentResult.Items[0].ContentDetails.Duration.Split('M');
@@ -253,7 +286,7 @@ namespace vBot.modules.music
 
             if (snippetResult.Items.Count == 1)
             {
-                string link = "https://www.youtube.com/watch?v=" + endID;
+                string link = "https://www.youtube.com/watch?v=" + videoID;
                 string thumbnail = snippetResult.Items[0].Snippet.Thumbnails.Medium.Url;
                 string title = snippetResult.Items[0].Snippet.Title;
                 string length = min + ":" + sec;
@@ -267,7 +300,7 @@ namespace vBot.modules.music
             }
             else
             {
-                await ReplyAsync("Song not found " + Context.User.Mention);
+                await ReplyAsync("More than one result found " + Context.User.Username);
             }
         }
 
@@ -285,36 +318,19 @@ namespace vBot.modules.music
             playing = false;
             ffmpeg.StandardOutput.BaseStream.Dispose();
             await stream.FlushAsync();
-            queue = new Queue<string>();
+            queue.Clear();
         }
 
-        private string FormatURL(string url)
+        private string GetVideoID(string url)
         {
-            string[] splitURL = url.Split("=");
-            string endID = "";
-
-            if (url.Contains("youtu.be"))
+            var uri = new Uri(url);
+            var query = HttpUtility.ParseQueryString(uri.Query);
+            string ret = "";
+            if (query.AllKeys.Contains("v"))
             {
-                endID = url.Split("/")[url.Split("/").Length - 1];
+                ret = query["v"];
             }
-            else
-            {
-                if (splitURL.Length == 2)
-                {
-                    endID = splitURL[1];
-                }
-                else if (splitURL.Length > 2)
-                {
-                    endID = splitURL[1].Split("&")[0];
-                }
-
-                if (endID.Contains("&"))
-                {
-                    endID = endID.Split("&")[0];
-                }
-            }
-
-            return endID;
+            return ret;
         }
 
         private Embed MakeSongEmbed(string[] current)
