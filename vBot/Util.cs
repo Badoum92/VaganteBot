@@ -64,6 +64,8 @@ namespace vBot
             text = text.Replace("*", "");
             text = text.Replace("~", "");
             text = text.Replace("_", "");
+            text = text.Replace("`", "");
+            text = text.Replace("|", "");
             return style + text + style;
         }
     }

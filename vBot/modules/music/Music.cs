@@ -73,32 +73,10 @@ namespace vBot.modules.music
         }
 
         [Command("join", RunMode = RunMode.Async)]
-        public async Task Join()
+        public async Task ForceJoin()
         {
-            if (VCclient != null)
-            {
-                await ReplyAsync("Bot already in use. Join the channel or wait.");
-                return;
-            }
-
-            IVoiceChannel channel = (Context.User as IVoiceState).VoiceChannel;
-            if (channel == null)
-            {
-                await ReplyAsync(Util.FormatText(Context.User.Username, "**") + ", you are not in a voice channel.");
-                return;
-            }
-
-            VCclient = await channel.ConnectAsync();
-            stream = VCclient.CreatePCMStream(AudioApplication.Music);
-            currentSong = null;
-            queue = new Queue<Song>();
-            votes = new List<ulong>();
-            stopwatch = new Stopwatch();
-            youtubeService = new YouTubeService(new BaseClientService.Initializer()
-            {
-                ApiKey = File.ReadLines("data/youtubetoken").First(),
-                ApplicationName = GetType().ToString()
-            });
+            if (Context.User.Id != Program.owner) return;
+            await Join();
         }
 
         [Command("leave", RunMode = RunMode.Async)]
@@ -241,10 +219,15 @@ namespace vBot.modules.music
                 return;
             }
 
-            string str = "```";
+            string str = "Next songs:\n";
+            int i = 0;
             foreach (var song in queue)
-                str += song.title + " (" + FormatTime(song.durationSec) + ")\n";
-            str += "```";
+            {
+                str += "▫️ | " + Util.FormatText(song.title, "**") + " - " + FormatTime(song.durationSec) + "\n";
+                i++;
+                if (i == 10)
+                    break;
+            }
 
             await ReplyAsync(str);
         }
@@ -344,6 +327,34 @@ namespace vBot.modules.music
             {
                 await ReplyAsync("More than one result found " + Context.User.Username + ", not adding anything");
             }
+        }
+
+        public async Task Join()
+        {
+            if (VCclient != null)
+            {
+                await ReplyAsync("Bot already in use. Join the channel or wait.");
+                return;
+            }
+
+            IVoiceChannel channel = (Context.User as IVoiceState).VoiceChannel;
+            if (channel == null)
+            {
+                await ReplyAsync(Util.FormatText(Context.User.Username, "**") + ", you are not in a voice channel.");
+                return;
+            }
+
+            VCclient = await channel.ConnectAsync();
+            stream = VCclient.CreatePCMStream(AudioApplication.Music);
+            currentSong = null;
+            queue = new Queue<Song>();
+            votes = new List<ulong>();
+            stopwatch = new Stopwatch();
+            youtubeService = new YouTubeService(new BaseClientService.Initializer()
+            {
+                ApiKey = File.ReadLines("data/youtubetoken").First(),
+                ApplicationName = GetType().ToString()
+            });
         }
 
         public static async Task DisconnectVC()

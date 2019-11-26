@@ -19,5 +19,11 @@ namespace vBot.modules.games.blackjack
             BlackJack game = new BlackJack(Context.User as SocketGuildUser, bet, Context.Channel);
             await Task.CompletedTask;
         }
+
+        [Command("bj")]
+        public async Task BJStart(int bet = 0)
+        {
+            await BlackJackStart(bet);
+        }
     }
 }
