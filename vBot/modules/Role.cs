@@ -28,10 +28,13 @@ namespace vBot.modules
             {
                 if (role.Name == "@everyone")
                     continue;
+
                 text += ":white_small_square: " + role.Name + "\n";
-                if (text.Length < 1900)
-                    continue;
-                await ReplyAsync(text);
+                if (text.Length > 1900)
+				{
+                    await ReplyAsync(text);
+					text = "";
+				}
             }
             if (text != "")
                 await ReplyAsync(text);
@@ -45,10 +48,11 @@ namespace vBot.modules
             foreach (var user in role.Members)
             {
                 text += ":white_small_square: " + user.Username + "\n";
-                if (text.Length < 1900)
-                    continue;
-                await ReplyAsync(text);
-                text = "";
+                if (text.Length > 1900)
+				{
+                    await ReplyAsync(text);
+					text = "";
+				}
             }
 
             if (text != "")

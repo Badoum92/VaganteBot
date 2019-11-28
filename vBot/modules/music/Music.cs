@@ -16,6 +16,7 @@ namespace vBot.modules.music
 {
     public class VoiceChat : ModuleBase<SocketCommandContext>
     {
+        static IVoiceChannel voiceChannel = null;
         static IAudioClient VCclient = null;
         static Queue<Song> queue;
         static List<ulong> votes;
@@ -184,6 +185,13 @@ namespace vBot.modules.music
                     return;
             }
 
+            IVoiceChannel channel = (Context.User as IVoiceState).VoiceChannel;
+            if (channel == null || channel.Id != voiceChannel.Id)
+            {
+                await ReplyAsync(Util.FormatText(Context.User.Username, "**") + ", you need to be in the same channel as the bot.");
+                return;
+            }
+
             int count = 0;
             foreach (var song in queue)
             {
@@ -287,26 +295,22 @@ namespace vBot.modules.music
                 await ReplyAsync(Util.FormatText(Context.User.Username, "**") + ", could not find requested song.");
                 return;
             }
-
-            var snippetRequest = youtubeService.Videos.List("snippet");
+			
+            var snippetRequest = youtubeService.Videos.List("snippet,contentDetails");
             snippetRequest.Id = videoID;
             var snippetResult = await snippetRequest.ExecuteAsync();
 
-            var contentRequest = youtubeService.Videos.List("contentDetails");
-            contentRequest.Id = videoID;
-            var contentResult = await contentRequest.ExecuteAsync();
-
-            if (snippetResult.Items.Count == 0 || contentResult.Items.Count == 0)
+            if (snippetResult.Items.Count == 0)
             {
                 await ReplyAsync(Util.FormatText(Context.User.Username, "**") + ", could not find requested song.");
                 return;
             }
 
-            int durationSec = GetDurationSec(contentResult.Items[0].ContentDetails.Duration);
-
-            if (durationSec / 60 >= 30)
+            int durationSec = GetDurationSec(snippetResult.Items[0].ContentDetails.Duration);
+			
+            if (durationSec >= 1200)
             {
-                await ReplyAsync("The song is longer than 30 minutes, please choose another one");
+                await ReplyAsync(Util.FormatText(Context.User.Username, "**") + "The song is longer than 20 minutes, please choose another one");
             }
 
             if (snippetResult.Items.Count == 1)
@@ -337,14 +341,14 @@ namespace vBot.modules.music
                 return;
             }
 
-            IVoiceChannel channel = (Context.User as IVoiceState).VoiceChannel;
-            if (channel == null)
+            voiceChannel = (Context.User as IVoiceState).VoiceChannel;
+            if (voiceChannel == null)
             {
                 await ReplyAsync(Util.FormatText(Context.User.Username, "**") + ", you are not in a voice channel.");
                 return;
             }
 
-            VCclient = await channel.ConnectAsync();
+            VCclient = await voiceChannel.ConnectAsync();
             stream = VCclient.CreatePCMStream(AudioApplication.Music);
             currentSong = null;
             queue = new Queue<Song>();
@@ -389,10 +393,31 @@ namespace vBot.modules.music
 
         private static int GetDurationSec(string s)
         {
-            string[] duration = s.Split('M');
-            int min = Int32.Parse(duration[0].Split('T')[1]);
-            int sec = Int32.Parse(duration[1].Split('S')[0]);
-            return sec + min * 60;
+            int min = 0;
+            int sec = 0;
+            int hour = 0;
+
+            s = s.Split('T')[1];
+            if (s.Contains('H'))
+            {
+                string[] split = s.Split('H');
+                hour = Int32.Parse(split[0]);
+                s = split[1];
+            }
+            if (s.Contains('M'))
+            {
+                string[] split = s.Split('M');
+                min = Int32.Parse(split[0]);
+                s = split[1];
+            }
+            if (s.Contains('S'))
+            {
+                string[] split = s.Split('S');
+                sec = Int32.Parse(split[0]);
+                s = split[1];
+            }
+
+            return sec + min * 60 + hour * 3600;
         }
 
         public static string FormatTime(int totalSec)
