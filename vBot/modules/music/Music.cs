@@ -121,7 +121,6 @@ namespace vBot.modules.music
 
             if (votes.Count >= (channel.Users.Count + 1) / 2)
             {
-                votes.Clear();
                 await ReplyAsync("Skipped!");
                 ffmpeg.StandardOutput.BaseStream.Dispose();
                 await stream.FlushAsync();
@@ -265,6 +264,7 @@ namespace vBot.modules.music
                 return;
             }
 
+			votes.Clear();
             currentSong = queue.Dequeue();
             await Context.Channel.SendMessageAsync("", false, currentSong.ToEmbed());
             ffmpeg = CreateStream(currentSong.url);

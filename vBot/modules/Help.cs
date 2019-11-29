@@ -37,7 +37,7 @@ Help page about this bot's features.
 
 General purpose commands.  
 
-▫️ |  `v!help ping` \➖ Checks if the bot is alive
+▫️ |  `v!ping` \➖ Checks if the bot is alive
 ▫️ |  `v!profile [user]` \➖ Shows `user`'s profile (default=self)
 ▫️ |  `v!avatar [user]` \➖ Shows `user`'s avatar (default=self)";
 
