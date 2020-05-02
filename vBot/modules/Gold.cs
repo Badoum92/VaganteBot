@@ -30,7 +30,6 @@ namespace vBot.modules.user
 
             public void Update()
             {
-                Console.WriteLine(id);
                 string json = JsonConvert.SerializeObject(this, Formatting.Indented);
                 File.WriteAllText(GetPath(id), json);
             }

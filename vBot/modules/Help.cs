@@ -66,6 +66,7 @@ vBot's gold system.
 Games you can play with this bot.
 
 ▫️ |  `v!ttt user` \➖ Starts a game of tic-tac-toe with `user`
+▫️ |  `v!c4 user` \➖ Starts a game of connect4 with `user`
 ▫️ |  `v!blackjack [bet]` \➖ Starts a game of blackjack with `bet` gold (default=0)
 ▫️ |  `v!bj [bet]` \➖ Starts a game of blackjack with `bet` gold (default=0)";
 

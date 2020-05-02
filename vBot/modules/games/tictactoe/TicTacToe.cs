@@ -134,10 +134,8 @@ namespace vBot.modules.games.tictactoe
             int winner = Math.Max(CheckDiags(), Math.Max(CheckLines(), CheckCols()));
             if (winner > 0)
             {
-                if (winner == 1)
-                    Update(null, Util.FormatText(p1.Username, "**") + " won!");
-                else
-                    Update(null, Util.FormatText(p2.Username, "**") + " won!");
+                SocketGuildUser w = winner == 1 ? p1 : p2;
+                Update(null, $"{w.Mention} won!");
                 games.Remove(this);
                 return;
             }
@@ -181,7 +179,7 @@ namespace vBot.modules.games.tictactoe
         {
             if (suffix == "")
             {
-                suffix = Util.FormatText(currentPlayer.Username, "**") + "'s turn.";
+                suffix = $"{currentPlayer.Mention}'s turn.";
             }
 
             if (channel == null && msg == null)
@@ -189,14 +187,11 @@ namespace vBot.modules.games.tictactoe
             }
             else if (msg == null)
             {
-                // Message hasn't been sent yet
-                // Send it and assign it to the msg variable
                 msg = await channel.SendMessageAsync(ToString() + "\n" + suffix);
                 await msg.AddReactionsAsync(reactions);
             }
             else
             {
-                // Message has already been sent, just update it
                 await msg.ModifyAsync(m => m.Content = ToString() + "\n" + suffix);
             }
         }

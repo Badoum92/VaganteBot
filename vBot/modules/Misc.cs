@@ -39,5 +39,13 @@ namespace vBot.modules
                 await m.DeleteAsync();
             }
         }
+
+        [Command("chongo")]
+        public async Task Chongo()
+        {
+            if (Context.User.Id != Program.owner)
+                return;
+            await ReplyAsync(Context.Guild.GetUser(138368310348611584).Mention + " I'm online, bitch");
+        }
     }
 }
